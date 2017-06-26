@@ -1,215 +1,312 @@
 package com.company;
 
+import java.util.Collection;
+import java.util.Map;
+import java.util.Set;
 
-import java.util.LinkedList;
-import java.util.Queue;
+/**
+ * Created by admin on 25.06.17.
+ */
+public class AVLtree<K extends Comparable<K>, V> implements Map<K, V> {
 
-public class AVLtree<Key extends Comparable<Key>,Value> {
+    private class Node {
 
-
-    public class AVLNode {
-
+        private K key;
+        private V value;
         private int h;
-        private int balance;
-        Key key;
-        Value value;
-        private AVLNode left, right, parent;
+        private Node left, right, parent;
 
-
-        public AVLNode(Key key, Value value, AVLNode parent) {
+        public Node(K key, V value, Node parent) {
 
             this.value = value;
+            this.key = key;
+            this.h = 1;
             this.left = this.right = null;
             this.parent = parent;
-            this.h = 1;
-            this.balance = 0;
-
-        }
-    }
-
-    private AVLNode root = null;
-
-        private int height(AVLNode left, AVLNode right) {
-            if (left == null && right == null) return 0;
-            else if (left == null) return right.h;
-            else if (right == null) return right.h;
-            else return Math.max(left.h, right.h);
         }
 
-        private int balance(AVLNode left, AVLNode right) {
+        public int height() {
             if (left == null && right == null) return 0;
             else if (left == null) return right.h;
             else if (right == null) return left.h;
+            else return Math.max(left.h, right.h);
+        }
+
+        public int balance() {
+            if (left == null && right == null) return 0;
+            else if (left == null) return right.h;
+            else if (right == null) return -left.h;
             else return right.h - left.h;
         }
+    }
+
+    private Node root = null;
+    private int size = 0;
 
 
-        private AVLNode leftRotation(AVLNode node) {
+    @Override
+    public int size() {
+        return size;
+    }
 
-            if (node.right.right == null && node.right.left != null) {
-                node.right = rightRotation(node.right);
-                node = leftRotation(node);
-            } else {
-                AVLNode subsidiaryNode = node.right;
-                node.right = subsidiaryNode.left;
-                subsidiaryNode.left = node;
-            }
-            return node;
-        }
+    @Override
+    public boolean isEmpty() {
+        return size == 0;
+    }
 
-        private AVLNode rightRotation(AVLNode node) {
+    @Override
+    public boolean containsKey(Object key) {
 
-            if (node.left.right == null && node.left.left != null) {
-                node.left = leftRotation(node.left);
-                node = rightRotation(node);
-            } else {
-                AVLNode helpNode = node.left;
-                node.left = helpNode.right;
-                helpNode.right = node;
-            }
-            return node;
-        }
+        return containsKey((K) key, root);
+    }
 
-
-        private AVLNode add(AVLNode node, Key key, Value value, AVLNode parent) {
-
-            if (node == null) {
-                AVLNode newnode = new AVLNode(key, value, parent);
-                return newnode;
-            }
-
-            int result = key.compareTo(node.key);
-            if (result > 0) {
-                node.right = add(node.right, key, value, node);
-                node.h = height(node.left, node.right) + 1;
-            } else if (result < 0) {
-                node.left = add(node.left, key, value, node);
-                node.h = height(node.left, node.right) + 1;
-            } else {
-                node.value = value;
-            }
-
-            node.balance = balance(node.left, node.right);
-            while (node.balance != 0){
-                if (node.balance == 2) {
-                    node = rightRotation(node);
-                } else if (node.balance == -2) {
-                    node = leftRotation(node);
-                }
-                node = node.parent;
-                node.balance = balance(node.left, node.right);
-            }
-            return node;
-        }
-
-        public void add(Key key, Value value){
-
-            root = add(root, key, value, null);
-        }
-
-
-        private AVLNode min(AVLNode node){
-
-            if(node.left == null && node.right == null) return node;
-            return min(node.left);
-        }
-
-
-        private AVLNode max(AVLNode node){
-
-            if(node.right == null) return node;
-            return max(node.right);
-        }
-
-
-        private AVLNode delete(AVLNode node, Key key) {
-
-            if (node == null) return null;
-            int result = key.compareTo(node.key);
-            if (result < 0) {
-                node.left = delete(node.left, key);
-            } else if (result > 0) {
-                node.right = delete(node.right, key);
-            } else {
-                if(node.right == null && node.left == null){
-                    node = null;
-                } else if(node.right == null && node.left != null){
-                    node = node.left;
-                    node.left = null;
-                } else  if(node.left == null && node.right != null){
-                    node = node.right;
-                    node.right = null;
-                } else {
-                    AVLNode subsidiaryNode = min(node.right);
-                    if(subsidiaryNode.right != null){
-                        subsidiaryNode = subsidiaryNode.right;
-                    }
-                    node.key = subsidiaryNode.key;
-                    node.value = subsidiaryNode.value;
-                    delete(subsidiaryNode, subsidiaryNode.key);
-                }
-            }
-            if(node != null){
-                node.h = height(node.left, node.right);
-                node.balance = balance(node.left, node.right);
-                while(Math.abs(node.balance) != 1){
-                    if(node.balance == 2){
-                        node = rightRotation(node);
-                    }else if(node.balance == -2){
-                        node = leftRotation(node);
-                    }
-                    if(node.parent == null) return node;
-                    node = node.parent;
-                    node.balance = balance(node.left, node.right);
-                }
-            }
-            return node;
-        }
-
-        public void deleteNode(Key key){
-
-            root = delete(root, key);
-        }
-
-
-        private Value getValue(AVLNode node, Key key){
-
-            int result = key.compareTo(node.key);
-            if(result > 0){
-                return getValue(node.left, key);
-            } else if(result < 0){
-                return getValue(node.right, key);
-            } else {
-                return node.value;
-            }
-        }
-
-        /*private AVLNode bypass(AVLNode node){
-            Queue<AVLNode> queue = new LinkedList<>();
-            queue.add(node);
-            while(!queue.isEmpty()){
-                if(node.left != null) queue.add(node.left);
-                if(node.right != null) queue.add(node.right);
-            }
-        }*/
-
-        private void print(AVLNode node, int level) {
-            if (node != null) {
-                print(node.right,level+1);
-                for (int i=0;i<level;i++) {
-                    System.out.print("\t");
-                }
-                System.out.println(node.key + "->" + node.value+" h="+node.h+" balance="+node.balance);
-                print(node.left,level+1);
-            }
-        }
-
-        public void print() {
-            print(root,0);
+    private boolean containsKey(K key, Node node) {
+        if (key.compareTo(node.key) > 0) {
+            return containsKey(node.right);
+        } else if (key.compareTo(node.key) < 0) {
+            return containsKey(node.left);
+        } else {
+            return true;
         }
     }
 
 
+    @Override
+    public boolean containsValue(Object value) {
+        return containsValue((V) value, root);
+    }
 
+    private boolean containsValue(V value, Node node) {
+        if (value == node.value) {
+            return true;
+        } else {
+            containsValue(value, node.left);
+            containsValue(value, node.right);
+        }
+        return false;
+    }
 
+    @Override
+    public V get(Object key) {
+        getValue(root, (K) key);
+        return null;
+    }
 
+    private V getValue(Node node, K key) {
+        int result = key.compareTo(node.key);
+        if (result > 0) {
+            return getValue(node.right, key);
+        } else if (result < 0) {
+            return getValue(node.right, key);
+        } else {
+            return node.value;
+        }
+    }
+
+    @Override
+    public V put(K key, V value) {
+        add(root, key, value, null);
+        return null;
+    }
+
+    private Node add(Node node, K key, V value, Node parent) {
+
+        if (node == null) {
+            Node newnode = new Node(key, value, parent);
+            size++;
+            return newnode;
+        }
+
+        int result = key.compareTo(node.key);
+        if (result > 0) {
+            node.right = add(node.right, key, value, node);
+            node.h = node.height() + 1;
+        } else if (result < 0) {
+            node.left = add(node.left, key, value, node);
+            node.h = node.height() + 1;
+        } else {
+            node.value = value;
+        }
+
+        rebalance(node);
+        size++;
+
+        return node;
+    }
+
+    @Override
+    public V remove(Object key) {
+        delete((K) key, root);
+        return null;
+    }
+
+    private Node delete(K key, Node node) {
+
+        if (key.compareTo(node.key) < 0) {
+            delete(key, node.left);
+        } else if (key.compareTo(node.key) > 0) {
+            // The key to be deleted is in the right sub-tree
+            delete(key, node.right);
+        } else {
+            if (node.left == null && node.right == null) {
+                node = null;
+            } else if (node.left != null && node.right == null) {
+                node = node.left;
+            } else if (node.left == null && node.right != null) {
+                node = node.right;
+            } else {
+                Node child = findMin(node);
+                node = child;
+                remove(child.key);
+                rebalance(node);
+            }
+        }
+
+        if (root == null) {
+            return root;
+        }
+        return null;
+    }
+
+    private void reHeight(Node node) {
+        if (node != null) {
+            node.h = 1 + Math.max(node.left.height(), node.right.height());
+        }
+    }
+
+    private void rebalance(Node node) {
+        int balance = node.balance();
+
+        if (balance == -2) {
+            if (node.left.left.height() >= node.left.right.height())
+                node = rotateRight(node);
+            else
+                node = rotateLeftThenRight(node);
+
+        } else if (balance == 2) {
+            if (node.right.right.height() >= node.right.left.height())
+                node = rotateLeft(node);
+            else
+                node = rotateRightThenLeft(node);
+        }
+
+        if (node.parent != null) {
+            rebalance(node.parent);
+        } else {
+            root = node;
+        }
+    }
+
+    private Node rotateLeft(Node a) {
+
+        Node b = a.right;
+        b.parent = a.parent;
+
+        a.right = b.left;
+
+        if (a.right != null)
+            a.right.parent = a;
+
+        b.left = a;
+        a.parent = b;
+
+        if (b.parent != null) {
+            if (b.parent.right == a) {
+                b.parent.right = b;
+            } else {
+                b.parent.left = b;
+            }
+        }
+
+        return b;
+    }
+
+    private Node rotateRight(Node a) {
+
+        Node b = a.left;
+        b.parent = a.parent;
+
+        a.left = b.right;
+
+        if (a.left != null)
+            a.left.parent = a;
+
+        b.right = a;
+        a.parent = b;
+
+        if (b.parent != null) {
+            if (b.parent.right == a) {
+                b.parent.right = b;
+            } else {
+                b.parent.left = b;
+            }
+        }
+
+        return b;
+    }
+
+    private Node rotateLeftThenRight(Node n) {
+        n.left = rotateLeft(n.left);
+        return rotateRight(n);
+    }
+
+    private Node rotateRightThenLeft(Node n) {
+        n.right = rotateRight(n.right);
+        return rotateLeft(n);
+    }
+
+    private Node findMax(Node node) {
+        if (node.right == null) return node;
+        return findMax(node.right);
+    }
+
+    public void findMin() {
+        findMin(root);
+    }
+
+    public void findMax() {
+        findMax(root);
+    }
+
+    private Node findMin(Node node) {
+        if (node.left == null) return node;
+        return findMin(node.left);
+    }
+
+    @Override
+    public void putAll(Map<? extends K, ? extends V> m) {
+
+    }
+
+    @Override
+    public void clear() {
+        clear(root);
+    }
+
+    private Node clear(Node node) {
+        node = null;
+        if (node.right != null) clear(node.left);
+        if (node.left != null) clear(node.right);
+        return null;
+    }
+
+    @Override
+    public Set<K> keySet() {
+        return null;
+    }
+
+    @Override
+    public Collection<V> values() {
+        return null;
+    }
+
+    @Override
+    public Set<Entry<K, V>> entrySet() {
+        return null;
+    }
+
+    @Override
+    public String toString() {
+        return super.toString();
+    }
+}
