@@ -1,8 +1,8 @@
 package com.company;
 
-import java.util.Collection;
-import java.util.Map;
-import java.util.Set;
+import javax.xml.soap.Node;
+import java.util.*;
+import java.util.ArrayList;
 
 /**
  * Created by admin on 25.06.17.
@@ -29,7 +29,7 @@ public class AVLtree<K extends Comparable<K>, V> implements Map<K, V> {
             if (left == null && right == null) return 0;
             else if (left == null) return right.h;
             else if (right == null) return left.h;
-            else return Math.max(left.h, right.h);
+            else return 1 + Math.max(left.h, right.h);
         }
 
         public int balance() {
@@ -51,45 +51,68 @@ public class AVLtree<K extends Comparable<K>, V> implements Map<K, V> {
 
     @Override
     public boolean isEmpty() {
-        return size == 0;
+        if (size == 0) return true;
+        return false;
     }
 
     @Override
     public boolean containsKey(Object key) {
-
-        return containsKey((K) key, root);
+        K Key = (K) key;
+        Node closest = find(Key);
+        if (closest.key == key) return true;
+        else return false;
     }
 
-    private boolean containsKey(K key, Node node) {
-        if (key.compareTo(node.key) > 0) {
-            return containsKey(node.right);
-        } else if (key.compareTo(node.key) < 0) {
-            return containsKey(node.left);
+    private Node find(K key) {
+        if (root == null) return null;
+        return find(root, key);
+    }
+
+    private Node find(Node start, K key) {
+        int comparison = key.compareTo(start.key);
+        if (comparison == 0) {
+            return start;
+        } else if (comparison < 0) {
+            if (start.left == null) return start;
+            return find(start.left, key);
         } else {
-            return true;
+            if (start.right == null) return start;
+            return find(start.right, key);
         }
     }
 
 
     @Override
     public boolean containsValue(Object value) {
-        return containsValue((V) value, root);
-    }
-
-    private boolean containsValue(V value, Node node) {
-        if (value == node.value) {
+        V Value = (V) value;
+        Node closest = containsValue(root, Value);
+        if(closest != null){
             return true;
         } else {
-            containsValue(value, node.left);
-            containsValue(value, node.right);
+            return false;
         }
-        return false;
+    }
+
+    private Node containsValue(Node node, V value){
+        Queue<Node> queue = new LinkedList<Node>();
+        do{
+            queue.add(node);
+            if(node.value == value) return node;
+            if(node.left != null) queue.add(node.left);
+            if(node.right != null) queue.add(node.right);
+            if(!queue.isEmpty()) node = queue.poll();
+        } while(!queue.isEmpty());
+        return null;
     }
 
     @Override
     public V get(Object key) {
-        getValue(root, (K) key);
-        return null;
+        K Key = (K) key;
+        if (Key == null) throw new NullPointerException();
+        if (root == null) throw new NullPointerException();
+        if (containsKey(key)) {
+            return getValue(root, Key);
+        } else throw new NullPointerException();
     }
 
     private V getValue(Node node, K key) {
@@ -97,7 +120,7 @@ public class AVLtree<K extends Comparable<K>, V> implements Map<K, V> {
         if (result > 0) {
             return getValue(node.right, key);
         } else if (result < 0) {
-            return getValue(node.right, key);
+            return getValue(node.left, key);
         } else {
             return node.value;
         }
@@ -105,76 +128,91 @@ public class AVLtree<K extends Comparable<K>, V> implements Map<K, V> {
 
     @Override
     public V put(K key, V value) {
-        add(root, key, value, null);
-        return null;
+        if (key == null) throw new NullPointerException("Wrong key");
+        if (root == null) {
+            root = new Node(key, value, null);
+            size++;
+            return value;
+        }
+        put(root, key, value, null);
+        return value;
     }
 
-    private Node add(Node node, K key, V value, Node parent) {
+    private Node put(Node node, K key, V value, Node parent) {
 
         if (node == null) {
-            Node newnode = new Node(key, value, parent);
+            if (key.compareTo(parent.key) > 0) {
+                parent.right = new Node(key, value, parent);
+            } else if (key.compareTo(parent.key) < 0) {
+                parent.left = new Node(key, value, parent);
+            }
             size++;
-            return newnode;
-        }
-
-        int result = key.compareTo(node.key);
-        if (result > 0) {
-            node.right = add(node.right, key, value, node);
-            node.h = node.height() + 1;
-        } else if (result < 0) {
-            node.left = add(node.left, key, value, node);
-            node.h = node.height() + 1;
+            rebalance(parent);
+            return node;
         } else {
-            node.value = value;
+            if (key.compareTo(node.key) > 0) {
+                return put(node.right, key, value, node);
+            } else if (key.compareTo(node.key) < 0) {
+                return put(node.left, key, value, node);
+            } else if (key.compareTo(node.key) == 0) {
+                node.value = value;
+                return node;
+            }
         }
-
-        rebalance(node);
-        size++;
-
         return node;
     }
 
     @Override
     public V remove(Object key) {
-        delete((K) key, root);
-        return null;
+        if (key == null) throw new NullPointerException("Wron key");
+        if (root == null) throw new NullPointerException();
+        if (containsKey(key)) {
+            delete((K) key, root);
+            return (V) key;
+        } else {
+            throw new NullPointerException();
+        }
     }
 
     private Node delete(K key, Node node) {
-
-        if (key.compareTo(node.key) < 0) {
-            delete(key, node.left);
-        } else if (key.compareTo(node.key) > 0) {
-            // The key to be deleted is in the right sub-tree
+        if (key.compareTo(node.key) > 0) {
             delete(key, node.right);
+        } else if (key.compareTo(node.key) < 0) {
+            delete(key, node.left);
         } else {
             if (node.left == null && node.right == null) {
-                node = null;
-            } else if (node.left != null && node.right == null) {
-                node = node.left;
-            } else if (node.left == null && node.right != null) {
-                node = node.right;
-            } else {
-                Node child = findMin(node);
-                node = child;
-                remove(child.key);
-                rebalance(node);
-            }
-        }
+                if (node.key.compareTo(node.parent.key) > 0) {
+                    node.parent.right = null;
+                } else if (node.key.compareTo(node.parent.key) < 0) {
+                    node.parent.left = null;
+                }
 
-        if (root == null) {
-            return root;
+            } else if (node.left != null && node.right == null) {
+                if (node.key.compareTo(node.parent.key) > 0) {
+                    node.parent.right = node.left;
+                } else if (node.key.compareTo(node.parent.key) < 0) {
+                    node.parent.left = node.left;
+                }
+            } else if (node.left == null && node.right != null) {
+                if (node.key.compareTo(node.parent.key) > 0) {
+                    node.parent.right = node.right;
+                } else if (node.key.compareTo(node.parent.key) < 0) {
+                    node.parent.left = node.right;
+                }
+            } else {
+                Node child = findMin(node.right);
+                node.key = child.key;
+                node.value = child.value;
+                child = null;
+            }
+            size--;
+            rebalance(node);
         }
         return null;
     }
 
-    private void reHeight(Node node) {
-        if (node != null) {
-            node.h = 1 + Math.max(node.left.height(), node.right.height());
-        }
-    }
-
     private void rebalance(Node node) {
+        node.height();
         int balance = node.balance();
 
         if (balance == -2) {
@@ -260,14 +298,6 @@ public class AVLtree<K extends Comparable<K>, V> implements Map<K, V> {
         return findMax(node.right);
     }
 
-    public void findMin() {
-        findMin(root);
-    }
-
-    public void findMax() {
-        findMax(root);
-    }
-
     private Node findMin(Node node) {
         if (node.left == null) return node;
         return findMin(node.left);
@@ -275,29 +305,58 @@ public class AVLtree<K extends Comparable<K>, V> implements Map<K, V> {
 
     @Override
     public void putAll(Map<? extends K, ? extends V> m) {
-
     }
+
 
     @Override
     public void clear() {
-        clear(root);
-    }
-
-    private Node clear(Node node) {
-        node = null;
-        if (node.right != null) clear(node.left);
-        if (node.left != null) clear(node.right);
-        return null;
+        root = null;
+        size = 0;
     }
 
     @Override
     public Set<K> keySet() {
-        return null;
+        int size = size();
+        return keySet(root, size);
     }
+
+    private Set<K> keySet(Node node, int size){
+        List<K> keysList = new ArrayList<K>();
+        do {
+            keysList.add(node.key);
+            if (node.left != null) {
+                size--;
+                keysList.add(node.left.key);
+            }
+            if(node.right != null){
+                size--;
+                keysList.add(node.right.key);
+            }
+        }while(size != 0);
+        return (Set<K>) keysList;
+    }
+
 
     @Override
     public Collection<V> values() {
-        return null;
+        int size = size();
+        return values(root, size);
+    }
+
+    private Collection<V> values(Node node,int size){
+        List<V> keysList = new ArrayList<V>();
+        do {
+            keysList.add(node.value);
+            if (node.left != null) {
+                size--;
+                keysList.add(node.left.value);
+            }
+            if(node.right != null){
+                size--;
+                keysList.add(node.right.value);
+            }
+        }while(size != 0);
+        return (Collection<V>) keysList;
     }
 
     @Override
@@ -305,8 +364,7 @@ public class AVLtree<K extends Comparable<K>, V> implements Map<K, V> {
         return null;
     }
 
-    @Override
-    public String toString() {
-        return super.toString();
-    }
 }
+
+
+
